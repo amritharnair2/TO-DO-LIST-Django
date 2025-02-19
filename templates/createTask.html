@@ -1,0 +1,190 @@
+{% load static %}
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Task</title>
+    <script src="https://kit.fontawesome.com/02d677a9c5.js" crossorigin="anonymous"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.18.0/font/bootstrap-icons.css" rel="stylesheet">
+    <link rel="icon" href="{% static 'favicon/favicon.ico' %}" type="image/x-icon">
+    <link rel="stylesheet" type="text/css" href="{% static 'css/style.css' %}">
+    <style>
+        .form-check-input,
+        .form-control {
+            border : 1px solid grey;
+        }
+        input:disabled {
+            cursor: not-allowed;
+            &:hover {
+                title: "Enable Email Notifications in Profile to use this feature";
+            }
+        }
+    </style>
+</head>
+<body>
+    {% include 'base.html' %}
+    <div class="container my-3">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="message fade-out {% if forloop.counter == 1 %}top-15{% else %}top-dynamic{% endif %}">
+                    {% if message.extra_tags == 'createTaskSuccess' %}
+                        <div class="success form-control-wrapper">
+                            <i class="fas fa-check-circle" style="color: green; font-size: 24px; margin-right: 10px;"></i>
+                            {{ message }}
+                        </div>
+                    {% elif message.extra_tags == 'createTaskError' %}
+                        <div class="error form-control-wrapper">
+                            <i class="fas fa-times-circle" style="color: red; font-size: 24px; margin-right: 10px;"></i>
+                            {{ message }}
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <h3 class="text-center">Create a Task</h3>
+        <div class="d-flex justify-content-center">
+            <div style="width: 800px;">
+                <form method="POST" action="{% url 'create_task' %}">
+                    {% csrf_token %}
+                    
+                    <!-- Task Title -->
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col">
+                                <label for="title" class="form-label">Task Title</label>
+                            </div>
+                            <div class="col">
+                                <div class="char-counter"><span id="titleCount">0</span>/100</div>
+                            </div>
+                        </div>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="title" 
+                            name="title" 
+                            required 
+                            oninput="updateCharCount('title', 'titleCount', 100)"
+                        >
+                    </div>
+                    
+                    <!-- Task Description -->
+                    <div class="mb-3">
+                        <div class="row">
+                            <div class="col">
+                                <label for="description" class="form-label">Task Description</label>
+                            </div>
+                            <div class="col">
+                                <div class="char-counter"><span id="descCount">0</span>/500</div>
+                            </div>
+                        </div>
+                        <textarea 
+                            class="form-control" 
+                            id="description" 
+                            name="description" 
+                            rows="2" 
+                            oninput="updateCharCount('description', 'descCount', 500)"
+                        ></textarea>
+                    </div>
+                    
+                    <!-- Due Date -->
+                    <div class="row mb-3">
+                        <div class="col">
+                            <label for="dueDate" class="form-label">Due Date</label>
+                            <input 
+                                type="datetime-local" 
+                                class="form-control icon-dark-mode" 
+                                id="dueDate" 
+                                name="dueDate" 
+                                value="{{ cur_date|date:'Y-m-d\\TH:i' }}" 
+                                required
+                            >
+                        </div>
+                    </div>
+                    
+                    <!-- Priority -->
+                    <div class="row mb-3">
+                        <div class="mb-3 col">
+                            <label for="important" class="form-label" style="margin-right:10px;">Priority</label>
+                            <select class="form-select" id="important" name="important">
+                                <option value="Low">Low</option>
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- Submit Button -->
+                    <button type="submit" class="btn btn-primary btn-add">Submit</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Fade out messages after 5 seconds
+        document.addEventListener('DOMContentLoaded', () => {
+            const messages = document.querySelectorAll('.message');
+            messages.forEach((message) => {
+                setTimeout(() => {
+                    message.classList.add('fade');
+                    setTimeout(() => {
+                        message.remove();
+                    }, 1000);
+                }, 5000);
+            });
+        });
+
+        // Adjust position if there are multiple messages
+        window.addEventListener('DOMContentLoaded', () => {
+            const messages = document.querySelectorAll('.message');
+            if (messages.length > 1) {
+                const firstMessage = messages[0];
+                const secondMessage = messages[1];
+
+                const firstMessageHeight = firstMessage.offsetHeight;
+                const gap = 2;
+                secondMessage.style.top = `calc(15% + ${firstMessageHeight + gap}px)`;
+            }
+        });
+
+        // Ensure due date is at least 2 minutes from now
+        document.getElementById('dueDate').addEventListener('change', function() {
+            const dueDate = new Date(this.value);
+            const curDate = new Date();
+            const minDate = new Date(curDate.getTime() + 2 * 60 * 1000);
+
+            if (dueDate < minDate) {
+                this.value = toUTCString(minDate);
+                alert('Due date cannot be in the past. It has been adjusted to 2 minutes from now.');
+            }
+        });
+
+        function toUTCString(localDate) {
+            return new Date(localDate.getTime() - localDate.getTimezoneOffset() * 60000)
+                .toISOString().slice(0, 16);
+        }
+
+        // Character counters
+        function updateCharCount(inputId, counterId, maxChars) {
+            const inputElement = document.getElementById(inputId);
+            const counterElement = document.getElementById(counterId);
+            let charCount = inputElement.value.length;
+
+            if (charCount > maxChars) {
+                inputElement.value = inputElement.value.substring(0, maxChars);
+                charCount = maxChars;
+            }
+            counterElement.textContent = charCount;
+        }
+    </script>
+</body>
+</html>
